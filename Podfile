@@ -6,5 +6,5 @@ target 'Clima' do
   use_frameworks!
 
   # Pods for Clima
-
+  pod 'SVProgressHUD'
 end
