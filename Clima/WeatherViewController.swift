@@ -7,18 +7,19 @@
 //
 
 import UIKit
+import CoreLocation
 
 
-class WeatherViewController: UIViewController {
+class WeatherViewController: UIViewController, CLLocationManagerDelegate {
     
     //Constants
     let WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather"
-    let APP_ID = "e72ca729af228beabd5d20e3b7749713"
+    let APP_ID = "daa8a9e8325a75abf5b6b16a74e55b42"
     /***Get your own App ID at https://openweathermap.org/appid ****/
     
 
     //TODO: Declare instance variables here
-    
+    let locationManager = CLLocationManager()
 
     
     //Pre-linked IBOutlets
@@ -29,10 +30,13 @@ class WeatherViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        
-        //TODO:Set up the location manager here.
     
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyKilometer
+        locationManager.requestWhenInUseAuthorization()
+        
+        locationManager.startUpdatingLocation()
+        
         
         
     }
@@ -43,6 +47,8 @@ class WeatherViewController: UIViewController {
     /***************************************************************/
     
     //Write the getWeatherData method here:
+    // Updated in the NetworkingModel.swift file.
+
     
 
     
@@ -55,6 +61,8 @@ class WeatherViewController: UIViewController {
    
     
     //Write the updateWeatherData method here:
+    // I updated a new class inside the NetworkModel.swift file with the JSON parsing using Codable.
+    // This seemed to be cleaner and a bit more flexable.
     
 
     
@@ -66,6 +74,11 @@ class WeatherViewController: UIViewController {
     
     //Write the updateUIWithWeatherData method here:
     
+    func updateUIWithWeatherData(_ weatherData: Response) {
+        temperatureLabel.text = String(format: "%0.0f°", (weatherData.main.temp * 9/5 - 459.67))
+        cityLabel.text = weatherData.name
+        weatherIcon.image = UIImage(named: Main.updateWeatherIcon(condition: (weatherData.weather.first?.id)!))
+    }
     
     
     
@@ -76,11 +89,39 @@ class WeatherViewController: UIViewController {
     
     
     //Write the didUpdateLocations method here:
-    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+
+        guard let location = locations.last else {
+           return
+        }
+        
+        if location.horizontalAccuracy > 0 {
+            locationManager.stopUpdatingLocation()
+        }
+        let latitude = String(location.coordinate.latitude)
+        let longitude = String(location.coordinate.longitude)
+        
+        let params: [String: String] = ["lat": latitude, "lon": longitude, "appid": APP_ID]
+        
+        Networking.getWeatherData(from: WEATHER_URL, parameters: params) { (response: Response?) in
+            guard let weatherResponse = response else {
+                self.cityLabel.text = "There was an error"
+                return
+            }
+            
+            DispatchQueue.main.async {
+                self.updateUIWithWeatherData(weatherResponse)
+            }
+        }
+    }
     
     
     //Write the didFailWithError method here:
-    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print(error)
+        
+        cityLabel.text = "City Unknown"
+    }
     
     
 
